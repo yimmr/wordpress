@@ -1,0 +1,19 @@
+{
+    "name": "impack/wp-database",
+    "license": "MIT",
+    "description": "",
+    "autoload": {
+        "psr-4": {
+            "Impack\\WP\\Database\\": ""
+        }
+    },
+    "require": {
+        "php": ">=7.3",
+        "impack/contracts": "^1.0",
+        "impack/support": "^1.0"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev"
+}
