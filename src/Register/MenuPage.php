@@ -38,7 +38,7 @@ abstract class MenuPage
     {
         $instance        = new static;
         $instance->props = array_merge($instance->props, $props);
-        $instance::$with = $instance;
+        self::$with      = $instance;
 
         return $instance;
     }
@@ -106,9 +106,9 @@ abstract class MenuPage
      */
     protected static function createNewPage($app)
     {
-        $instance = static::$with ?: new static;
+        $instance = self::$with ?: new static;
 
-        static::$with = null;
+        self::$with = null;
 
         $instance->setApp($app);
 
