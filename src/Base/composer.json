@@ -11,7 +11,8 @@
         "php": ">=7.3",
         "impack/container": "^2.0",
         "impack/contracts": "^2.0",
-        "impack/support": "^2.0"
+        "impack/support": "^2.0",
+        "impack/wp-support": "^3.0"
     },
     "config": {
         "sort-packages": true
