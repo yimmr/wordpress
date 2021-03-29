@@ -3,80 +3,61 @@
 namespace Impack\WP\Base;
 
 use Impack\Container\Container;
-use Impack\Contracts\Foundation\Application as ApplicationContract;
-use Impack\WP\Base\Config;
+use Impack\Support\Str;
 
-class Application extends Container implements ApplicationContract
+abstract class Application extends Container
 {
     protected $path;
 
     protected $url;
 
-    protected $hasBootstrapped = false;
+    protected $prefix = '';
+
+    /** 绑定不同类型的服务 */
+    protected $serviceTypes = [];
+
+    protected $hasBeenBootstrapped = false;
+
+    /** 服务提供者 */
+    abstract public function provider();
 
     public function __construct($path = null)
     {
-        $this->setPath($path);
+        if (!is_null($path)) {
+            $this->setPath($path);
+        }
         $this->registerBaseBindings();
         $this->registerCoreAliases();
     }
 
-    /**
-     * 注册基础类到容器
-     */
-    protected function registerBaseBindings()
-    {
-        static::setInstance($this);
-        $this->instance('app', $this);
-        $this->instance(Container::class, $this);
-
-        $this->singleton('config', Config::class);
-    }
-
-    /**
-     * 设置应用运行目录
-     *
-     * @param  string  $basePath
-     * @return $this
-     */
+    /** 设置应用目录 */
     public function setPath(string $path)
     {
-        if ($path) {
-            $this->path = rtrim($path, '\/');
-        }
+        $this->path = rtrim($path, '\/');
+    }
 
-        return $this;
+    /** 设置应用目录Url */
+    public function setUrl(string $url)
+    {
+        $this->url = rtrim($url, '/');
     }
 
     /**
-     * 返回应用运行目录
+     * 返回应用目录
      *
-     * @param  string  $path
      * @return string
      */
-    public function path($path = '')
+    public function path(string $path = '')
     {
         return $this->path . ($path ? DIRECTORY_SEPARATOR . $path : $path);
     }
 
     /**
-     * 返回核心类文件目录
-     *
-     * @param  string  $path
-     * @return string
-     */
-    public function appPath($path = '')
-    {
-        return $this->path . DIRECTORY_SEPARATOR . 'app' . ($path ? DIRECTORY_SEPARATOR . $path : $path);
-    }
-
-    /**
      * 返回配置文件目录
      *
-     * @param  string  $path
      * @return string
      */
-    public function configPath($path = '')
+    public function configPath(string $path = '')
     {
         return $this->path . DIRECTORY_SEPARATOR . 'config' . ($path ? DIRECTORY_SEPARATOR . $path : $path);
     }
@@ -84,94 +65,172 @@ class Application extends Container implements ApplicationContract
     /**
      * 返回公共资源目录
      *
-     * @param  string  $path
      * @return string
      */
-    public function publicPath($path = '')
+    public function publicPath(string $path = '')
     {
         return $this->path . DIRECTORY_SEPARATOR . 'public' . ($path ? DIRECTORY_SEPARATOR . $path : $path);
     }
 
     /**
-     * 设置运行目录的网址
+     * 返回应用目录Url
      *
-     * @param  string  $url
-     * @return $this
-     */
-    public function setUrl(string $url)
-    {
-        if ($url) {
-            $this->url = rtrim($url, '/');
-        }
-
-        return $this;
-    }
-
-    /**
-     * 返回运行目录的链接
-     *
-     * @param  string  $uri
      * @return string
      */
-    public function url($uri = '')
+    public function url(string $uri = '')
     {
-        return $this->url . ($uri ? "/$uri" : $uri);
+        return $this->url . ($uri ? '/' . $uri : $uri);
     }
 
     /**
-     * 返回公共资源目录的链接
+     * 返回公共资源Url
      *
-     * @param  string  $uri
      * @return string
      */
-    public function publicUrl($uri = '')
+    public function publicUrl(string $uri = '')
     {
-        return $this->url . '/public' . ($uri ? "/$uri" : $uri);
+        return $this->url . '/public' . ($uri ? '/' . $uri : $uri);
     }
 
     /**
-     * 是否已启动引导程序
+     * 给指定键名添加前缀或返回前缀名
      *
-     * @return bool
+     * @param string $key
+     * @param bool $sanke 是否带下划线
+     * @return string
      */
-    public function hasBootstrapped()
+    public function prefix($key = '', $sanke = true)
     {
-        return $this->hasBootstrapped;
+        return $this->prefix . ($sanke ? '_' : '') . $key;
     }
 
     /**
-     * 启动全局引导程序
+     * 开始加载WP时的时间(s)
      *
-     * @param  array  $bootstrappers
+     * @return float
      */
-    public function bootstrap(array $bootstrappers)
+    public function timestart()
     {
-        $this->hasBootstrapped = true;
-        foreach ($bootstrappers as $bootstrapper) {
-            $this->make($bootstrapper)->bootstrap($this);
-        }
+        global $timestart;
+        return $timestart;
     }
 
     /**
-     * 是否在调试模式下运行
+     * 判断是否已开启调试
      *
      * @return bool
      */
     public function isDebugging()
     {
-        return $this['config']['app.debug'] ?? \WP_DEBUG === true;
+        return defined('WP_DEBUG') ? \WP_DEBUG : false;
+    }
+
+    /** 注册前台服务 */
+    public function web($service)
+    {
+        $this->serviceTypes['web'] = $service;
+    }
+
+    /** 注册后台服务 */
+    public function admin($service)
+    {
+        $this->serviceTypes['admin'] = $service;
+    }
+
+    /** 注册REST API服务 */
+    public function rest($service)
+    {
+        $this->serviceTypes['rest'] = $service;
+    }
+
+    /** 注册admin-ajax服务 */
+    public function ajax($service)
+    {
+        $this->serviceTypes['ajax'] = $service;
     }
 
     /**
-     * 注册核心类的别名
+     * 启动应用
+     *
+     * @param array $bootstrappers
      */
+    public function boot(array $bootstrappers = [])
+    {
+        $this->addCoreHooks();
+        if (!$this->hasBeenBootstrapped()) {
+            $this->provider();
+            $this->bootstrapWith($bootstrappers);
+        }
+        $this->dispatchToService();
+    }
+
+    /** 添加核心钩子 */
+    protected function addCoreHooks()
+    {
+        foreach (['bootstrapped', 'pluginsLoaded', 'setupTheme', 'afterSetupTheme', 'init'] as $method) {
+            if (\method_exists($this, $method)) {
+                \add_action(Str::snake($method), [$this, $method]);
+            }
+        }
+    }
+
+    /** 创建不同环境的服务 */
+    protected function dispatchToService()
+    {
+        $type = \is_admin() ? (\wp_doing_ajax() ? 'ajax' : 'admin') : 'web';
+
+        if (isset($this->serviceTypes[$type])) {
+            $this->make($this->serviceTypes[$type]);
+        }
+
+        // rest只在钩子内实例化
+        if (isset($this->serviceTypes['rest'])) {
+            \add_action('rest_api_init', function () {
+                $this->make($this->serviceTypes['rest']);
+            });
+        }
+    }
+
+    /**
+     * 启动引导程序
+     *
+     * @param array $bootstrappers
+     */
+    public function bootstrapWith(array $bootstrappers)
+    {
+        $this->hasBeenBootstrapped = true;
+        foreach ($bootstrappers as $bootstrapper) {
+            $this->make($bootstrapper)->bootstrap($this);
+        }
+        \do_action('bootstrapped', $this);
+    }
+
+    /**
+     * 是否已启动引导
+     *
+     * @return bool
+     */
+    public function hasBeenBootstrapped()
+    {
+        return $this->hasBeenBootstrapped;
+    }
+
+    /** 注册基础服务 */
+    protected function registerBaseBindings()
+    {
+        static::setInstance($this);
+        $this->instance(Container::class, $this);
+        $this->instance('app', $this);
+        $this->singleton('config', \Impack\WP\Base\Config::class);
+    }
+
+    /** 注册核心类别名 */
     protected function registerCoreAliases()
     {
         foreach ([
-            'app'        => [self::class, ApplicationContract::class, \Impack\Contracts\Container\Container::class],
-            'config'     => [Config::class, \Impack\Contracts\Config\Repository::class],
+            'app'        => [static::class, self::class, \Impack\Contracts\Container\Container::class],
+            'config'     => [\Impack\WP\Base\Config::class, \Impack\Contracts\Config\Repository::class],
             'filesystem' => [\Impack\WP\Base\Filesystem::class],
-            // 'remote'     => [\Impack\WP\Http\Remote::class],
         ] as $id => $aliases) {
             foreach ($aliases as $alias) {
                 $this->alias($id, $alias);

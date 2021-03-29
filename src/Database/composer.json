@@ -9,8 +9,8 @@
     },
     "require": {
         "php": ">=7.3",
-        "impack/contracts": "^1.0",
-        "impack/support": "^1.0"
+        "impack/contracts": "^2.0",
+        "impack/support": "^2.0"
     },
     "config": {
         "sort-packages": true

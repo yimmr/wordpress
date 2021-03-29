@@ -1,6 +1,6 @@
 <?php
 
-namespace Impack\WP\Base;
+namespace Impack\WP\Support;
 
 class Script
 {

@@ -1,3 +1,8 @@
+.checkbox-wrapper + span,
+.radio-wrapper + span {
+    margin-left: 0.75rem;
+}
+
 .image-field {
     display: inline-block;
     position: relative;
@@ -77,4 +82,8 @@
 
 .image-field > img + .cancel:hover {
     opacity: 1;
+}
+
+.image-field-group > .image-field + .image-field {
+    margin-left: 0.75rem;
 }

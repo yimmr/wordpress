@@ -1,10 +1,10 @@
 <?php
 
-namespace Impack\WP\Base;
+namespace Impack\WP\Base\Loader;
 
 use Impack\Contracts\Config\Loader;
 
-class OptionLoader implements Loader
+class Option implements Loader
 {
     public function load($keyseg, &$items)
     {
