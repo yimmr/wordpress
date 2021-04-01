@@ -1,6 +1,6 @@
 <?php
 
-namespace Impack\WP\Support;
+namespace Impack\WP\Post;
 
 use Closure;
 
@@ -86,7 +86,7 @@ class Register
     /**
      * 字段添加到所有分类法
      *
-     * @param \Impack\WP\Support\TaxField|\Impack\WP\Support\TaxField[] $className
+     * @param \Impack\WP\Post\TaxField|\Impack\WP\Post\TaxField[] $className
      * @param array $exclude 排除的分类法
      */
     public static function addGlobalTaxField($className, array $exclude = [])
@@ -106,7 +106,7 @@ class Register
      * 给指定分类法添加表单字段
      *
      * @param string $taxonomy
-     * @param \Impack\WP\Support\TaxField|\Impack\WP\Support\TaxField[] $fields
+     * @param \Impack\WP\Post\TaxField|\Impack\WP\Post\TaxField[] $fields
      */
     public static function addTaxFromFields($taxonomy, $fields = [])
     {

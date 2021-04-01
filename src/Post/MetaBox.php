@@ -1,6 +1,6 @@
 <?php
 
-namespace Impack\WP\Support;
+namespace Impack\WP\Post;
 
 abstract class MetaBox
 {

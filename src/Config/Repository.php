@@ -1,25 +1,29 @@
 <?php
 
-namespace Impack\WP\Base;
+namespace Impack\WP\Config;
 
 use ArrayAccess;
-use Impack\Contracts\Config\Loader;
-use Impack\Contracts\Config\Repository;
-use Impack\Support\Arr;
-use Impack\WP\Base\Application;
+use Closure;
+use Impack\WP\Support\Arr;
 
-class Config implements ArrayAccess, Repository
+class Repository implements ArrayAccess
 {
-    protected $items = [];
+    protected $app;
 
-    protected $loaders = [];
+    protected $items = [];
 
     protected $keysegs = [];
 
-    public function __construct(Application $app)
+    protected $loaders = [
+        'file'   => \Impack\WP\Config\FileLoader::class,
+        'option' => \Impack\WP\Config\OptionLoader::class,
+    ];
+
+    public function __construct($app = null)
     {
-        $this->loaders['file']   = new \Impack\WP\Base\Loader\File($app);
-        $this->loaders['option'] = new \Impack\WP\Base\Loader\Option($app);
+        if (!is_null($app)) {
+            $this->app = $app;
+        }
     }
 
     /**
@@ -143,12 +147,12 @@ class Config implements ArrayAccess, Repository
     }
 
     /**
-     * 设置指定配置项的加载器
+     * 添加或设置指定项的加载器
      *
      * @param  string  $name
-     * @param  \Impack\Contracts\Config\Loader  $loader
+     * @param  Closure|\Impack\WP\Config\LoaderContract|sting  $loader 类名/实例/闭包返回实现约定的实例
      */
-    public function loader($name, Loader $loader)
+    public function loader($name, $loader)
     {
         $this->loaders[$name] = $loader;
     }
@@ -157,11 +161,20 @@ class Config implements ArrayAccess, Repository
      * 获取配置项对应的加载器
      *
      * @param  string  $name
-     * @return \Impack\Contracts\Config\Loader
+     * @return \Impack\WP\Config\LoaderContract
      */
     protected function getLoader($name = 'file')
     {
-        return $this->loaders[$name] ?? $this->loaders['file'];
+        $name   = isset($this->loaders[$name]) ? $name : 'file';
+        $loader = $this->loaders[$name];
+
+        if (is_string($loader)) {
+            return $this->loaders[$name] = new $loader($this->app);
+        } elseif ($loader instanceof Closure) {
+            return $this->loaders[$name] = $loader($this->app);
+        }
+
+        return $loader;
     }
 
     /**

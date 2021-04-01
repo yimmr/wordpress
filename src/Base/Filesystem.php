@@ -3,7 +3,7 @@
 namespace Impack\WP\Base;
 
 use Exception;
-use Impack\Support\Str;
+use Impack\WP\Base\ApplicationTrait;
 use ReflectionObject;
 
 class Filesystem
@@ -72,6 +72,6 @@ class Filesystem
 
     public function __call($name, $arguments)
     {
-        return call_user_func_array([$this->wpFilesystem, Str::snake($name)], $arguments);
+        return call_user_func_array([$this->wpFilesystem, ApplicationTrait::methodToHook($name)], $arguments);
     }
 }

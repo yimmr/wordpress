@@ -3,7 +3,7 @@
 namespace Impack\WP\Base;
 
 use Impack\WP\Base\Application;
-use Impack\WP\Support\Register;
+use Impack\WP\Post\Register;
 
 class Manager
 {

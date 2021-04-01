@@ -26,7 +26,7 @@ class Admin
      */
     public function addMenu()
     {
-        AddMenuPage::add($this->getConfig('admin.menu_pages', []));
+        AddMenuPage::addMany($this->getConfig('admin.menu_pages', []));
     }
 
     /**

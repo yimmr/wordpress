@@ -1,28 +1,28 @@
 <?php
 
-namespace Impack\WP\Base\Loader;
+namespace Impack\WP\Config;
 
-use Impack\Contracts\Config\Loader;
+use Impack\WP\Config\LoaderContract;
 
-class Option implements Loader
+class OptionLoader implements LoaderContract
 {
     public function load($keyseg, &$items)
     {
-        if (function_exists('get_option') && !is_null($val = \get_option($keyseg[1], null))) {
+        if (isset($keyseg[1]) && !is_null($val = \get_option($keyseg[1], null))) {
             $items[$keyseg[0]][$keyseg[1]] = $val;
         }
     }
 
     public function update($keyseg, &$items)
     {
-        if (function_exists('update_option')) {
+        if (isset($keyseg[1])) {
             return \update_option($keyseg[1], $items[$keyseg[0]][$keyseg[1]]);
         }
     }
 
     public function delete($keyseg, &$items)
     {
-        if (function_exists('delete_option')) {
+        if (isset($keyseg[1])) {
             return \delete_option($keyseg[1]);
         }
     }

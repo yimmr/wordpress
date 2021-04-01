@@ -1,10 +1,9 @@
 <?php
 
-namespace Impack\WP\Base;
+namespace Impack\WP\Config;
 
 use ArgumentCountError;
-use Impack\Support\Arr;
-use Impack\WP\Base\Application;
+use Impack\WP\Support\Arr;
 
 /**
  * @method mixed get(string $key, $default=null)
@@ -16,16 +15,18 @@ abstract class Option
 {
     protected $app;
 
+    /** 配置名称 - 默认用作不带扩展名的字段配置文件名 */
+    protected $name;
+
     protected $fields;
 
     protected $default;
 
-    /** 配置文件名 */
-    protected $name = 'theme';
-
-    public function __construct(Application $app)
+    public function __construct($app = null)
     {
-        $this->app = $app;
+        if (!is_null($app)) {
+            $this->app = $app;
+        }
     }
 
     /**
@@ -65,41 +66,11 @@ abstract class Option
         }
 
         $this->default = [];
-        foreach ($this->loadFieldsFile() as $name => $field) {
+        foreach ($this->loadFields() as $name => $field) {
             $this->default[$name] = static::getFieldValue($field);
         }
 
         return $this->getDefault($key);
-    }
-
-    /**
-     * 读取所有字段
-     *
-     * @return array
-     */
-    public function getFields()
-    {
-        return $this->fields ?? ($this->fields = $this->loadFieldsFile());
-    }
-
-    /**
-     * 返回配置文件名
-     *
-     * @return string
-     */
-    public function getName()
-    {
-        return $this->name;
-    }
-
-    /**
-     * 加载字段的配置文件
-     *
-     * @return array
-     */
-    protected function loadFieldsFile()
-    {
-        return (array) (include $this->app->configPath($this->getName() . '.php'));
     }
 
     /**
@@ -121,6 +92,56 @@ abstract class Option
         }
     }
 
+    /**
+     * 读取所有的字段
+     *
+     * @return array
+     */
+    public function getFields()
+    {
+        return $this->fields ?? ($this->fields = $this->loadFields());
+    }
+
+    /**
+     * 加载字段的配置文件
+     *
+     * @return array
+     */
+    protected function loadFields()
+    {
+        return (array) (include $this->app->configPath($this->getName() . '.php'));
+    }
+
+    /**
+     * 返回配置名称
+     *
+     * @return string
+     */
+    public function getName()
+    {
+        return $this->name;
+    }
+
+    /**
+     * 返回带前缀的完整键名
+     *
+     * @return string
+     */
+    public function getFullKey($key)
+    {
+        return $this->app->prefix($key);
+    }
+
+    /**
+     * 返回配置实例
+     *
+     * @return \Impack\WP\Config\Repository
+     */
+    public function getConfig()
+    {
+        return $this->app->make('config');
+    }
+
     public function __call($name, $params)
     {
         if (count($params) < 1) {
@@ -132,8 +153,8 @@ abstract class Option
         }
 
         $name      = $name == 'delete' ? 'forget' : $name;
-        $params[0] = 'option.' . $this->app->prefix($params[0]);
+        $params[0] = 'option.' . $this->getFullKey($params[0]);
 
-        return $this->app->make('config')->$name(...$params);
+        return $this->getConfig()->$name(...$params);
     }
 }

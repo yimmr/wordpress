@@ -17,33 +17,47 @@ class AddMenuPage
     ];
 
     /**
+     * 添加单个菜单页
+     *
+     * @param array $menu
+     * @param string $parent
+     */
+    public static function add(array $menu, $parent = '')
+    {
+        \add_action('admin_enqueue_scripts', [static::class, 'enqueueScripts']);
+
+        if ($parent) {
+            static::resolveSubMenuMethod($parent, $method);
+            static::addMenuPage($method, $menu, $parent);
+        } else {
+            static::addMenuPage('add_menu_page', $menu);
+        }
+    }
+
+    /**
      * 添加多个菜单页面
      *
      * @param array $menus
      */
-    public static function add(array $menus)
+    public static function addMany(array $menus)
     {
         global $admin_page_hooks;
 
         \add_action('admin_enqueue_scripts', [static::class, 'enqueueScripts']);
 
         foreach ($menus as $menu) {
-            $slug = $menu['slug'] ?? '';
-            $func = "add_{$slug}_page";
+            $parent = $slug = $menu['slug'] ?? '';
 
-            // 仅不存在顶级菜单时添加，若已定义添加子菜单的函数也视为已存在顶级
-            if (!isset($admin_page_hooks[$slug]) && !function_exists($func)) {
+            static::resolveSubMenuMethod($parent, $method);
+
+            // 仅不存在顶级菜单时添加
+            if (!isset($admin_page_hooks[$slug]) && $parent !== true) {
                 static::addMenuPage('add_menu_page', $menu);
             }
 
             if (!empty($menu['children'])) {
-                if (function_exists($func)) {
-                    $slug = true;
-                } else {
-                    $func = 'add_submenu_page';
-                }
                 foreach ($menu['children'] as $submenu) {
-                    static::addMenuPage($func, $submenu, $slug);
+                    static::addMenuPage($method, $submenu, $slug);
                 }
             }
         }
@@ -59,6 +73,22 @@ class AddMenuPage
         if (isset(static::$enqueue[$hook])) {
             call_user_func([static::$enqueue[$hook], 'enqueue']);
             unset(static::$enqueue[$hook]);
+        }
+    }
+
+    /**
+     * 解析添加子菜单的方法，存在默认顶级菜单时 $parent 改为true
+     *
+     * @param string $parent
+     * @param string $method
+     */
+    protected static function resolveSubMenuMethod(&$parent, &$method)
+    {
+        $method = "add_{$parent}_page";
+        if (function_exists($method)) {
+            $parent = true;
+        } else {
+            $method = 'add_submenu_page';
         }
     }
 

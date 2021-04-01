@@ -1,10 +1,10 @@
 <?php
 
-namespace Impack\WP\Support;
+namespace Impack\WP\REST;
 
 use BadMethodCallException;
 
-abstract class RestRouter
+abstract class Router
 {
     const VENDOR = 'imwp';
 
@@ -78,7 +78,7 @@ abstract class RestRouter
 
     public static function __callStatic($name, $params)
     {
-        if (in_array($name, ['get', 'post', 'put', 'delete'])) {
+        if (in_array($name, ['get', 'post', 'put', 'patch', 'delete'])) {
             $params[1] = [
                 'method'   => strtoupper($name),
                 'callback' => $params[1],

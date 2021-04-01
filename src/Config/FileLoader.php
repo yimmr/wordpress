@@ -1,10 +1,10 @@
 <?php
 
-namespace Impack\WP\Base\Loader;
+namespace Impack\WP\Config;
 
-use Impack\Contracts\Config\Loader;
+use Impack\WP\Config\LoaderContract;
 
-class File implements Loader
+class FileLoader implements LoaderContract
 {
     protected $app;
 
@@ -22,7 +22,7 @@ class File implements Loader
     public function load($keyseg, &$items)
     {
         if (file_exists($file = $this->path($keyseg[0]))) {
-            $items[$keyseg[0]] = require $file;
+            $items[$keyseg[0]] = include $file;
         }
     }
 
