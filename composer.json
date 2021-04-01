@@ -14,10 +14,7 @@
         "impack/contracts": "^2.0"
     },
     "replace": {
-        "impack/wp-base": "self.version",
-        "impack/wp-database": "self.version",
-        "impack/wp-components": "self.version",
-        "impack/wp-support": "self.version"
+        "impack/wp-database": "self.version"
     },
     "config": {
         "sort-packages": true
