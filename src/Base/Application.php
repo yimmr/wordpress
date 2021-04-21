@@ -3,12 +3,13 @@
 namespace Impack\WP\Base;
 
 use Impack\Container\Container;
+use Impack\WP\Service\BaseTrait;
 
 abstract class Application extends Container
 {
-    use ApplicationTrait;
+    use BaseTrait;
 
-    protected $prefix = '';
+    protected $prefix = 'imwp';
 
     protected $serviceTypes = [];
 
@@ -21,6 +22,64 @@ abstract class Application extends Container
         }
         $this->registerBaseBindings();
         $this->registerCoreAliases();
+    }
+
+    /** 服务提供者 */
+    abstract public function provider();
+
+    /**
+     * 返回配置文件目录
+     *
+     * @return string
+     */
+    public function configPath(string $path = '')
+    {
+        return $this->path . \DIRECTORY_SEPARATOR . 'config' . ($path ? \DIRECTORY_SEPARATOR . $path : $path);
+    }
+
+    /** 注册前台服务 */
+    public function web($service)
+    {
+        $this->serviceTypes['web'] = $service;
+    }
+
+    /** 注册后台服务 */
+    public function admin($service)
+    {
+        $this->serviceTypes['admin'] = $service;
+    }
+
+    /** 注册REST API服务 */
+    public function rest($service)
+    {
+        $this->serviceTypes['rest'] = $service;
+    }
+
+    /** 注册admin-ajax服务 */
+    public function ajax($service)
+    {
+        $this->serviceTypes['ajax'] = $service;
+    }
+
+    /**
+     * 判断是否已开启调试
+     *
+     * @return bool
+     */
+    public function isDebugging()
+    {
+        return defined('WP_DEBUG') ? \WP_DEBUG : false;
+    }
+
+    /**
+     * 开始加载WP时的时间(s)
+     *
+     * @return float
+     */
+    public static function timestart()
+    {
+        global $timestart;
+        return $timestart;
     }
 
     /**
@@ -36,6 +95,16 @@ abstract class Application extends Container
             $this->bootstrapWith($bootstrappers);
         }
         $this->dispatchToService();
+    }
+
+    /** 添加核心钩子 */
+    protected function addCoreHooks()
+    {
+        foreach (['bootstrapped', 'afterSetupTheme', 'init'] as $method) {
+            if (\method_exists($this, $method)) {
+                $this->bindAction($this, $method);
+            }
+        }
     }
 
     /** 创建不同环境的服务 */
