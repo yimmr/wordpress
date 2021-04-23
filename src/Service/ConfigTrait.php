@@ -2,9 +2,9 @@
 
 namespace Impack\WP\Service;
 
-trait OptionTrait
+trait ConfigTrait
 {
-    protected $options;
+    protected $config;
 
     /**
      * 读取配置项
@@ -13,9 +13,9 @@ trait OptionTrait
      * @param mixed $default
      * @return mixed
      */
-    public static function option($key, $default = null)
+    public static function config($key, $default = null)
     {
-        return static::getInstance()->getOption($key, $default);
+        return static::getInstance()->getConfig($key, $default);
     }
 
     /**
@@ -25,13 +25,13 @@ trait OptionTrait
      * @param mixed $default
      * @return mixed
      */
-    public function getOption($key, $default = null)
+    public function getConfig($key, $default = null)
     {
-        if (!is_array($this->options)) {
-            $this->options = $this->readConfigFile('service');
+        if (!is_array($this->config)) {
+            $this->config = $this->readConfigFile('service');
         }
 
-        return $this->options[$key] ?? $default;
+        return $this->config[$key] ?? $default;
     }
 
     /**

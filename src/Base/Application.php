@@ -35,6 +35,16 @@ abstract class Application extends Container
         return $this->path . \DIRECTORY_SEPARATOR . 'config' . ($path ? \DIRECTORY_SEPARATOR . $path : $path);
     }
 
+    /**
+     * 返回文件存储目录
+     *
+     * @return string
+     */
+    public function storagePath(string $path = '')
+    {
+        return $this->path . \DIRECTORY_SEPARATOR . 'storage' . ($path ? \DIRECTORY_SEPARATOR . $path : $path);
+    }
+
     /** 注册前台服务 */
     public function web($service)
     {
