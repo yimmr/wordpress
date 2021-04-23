@@ -15,11 +15,9 @@ abstract class Application extends Container
 
     protected $hasBeenBootstrapped = false;
 
-    public function __construct($path = null)
+    public function __construct($path = null, $url = null)
     {
-        if (!is_null($path)) {
-            $this->setPath($path);
-        }
+        $this->registerBasePath($path, $url);
         $this->registerBaseBindings();
         $this->registerCoreAliases();
     }

@@ -2,130 +2,121 @@
 
 namespace Impack\WP\Post;
 
-use Closure;
-
 class Register
 {
+    protected static $taxonomies = [];
+
     /**
-     * 注册Post类型及相关
+     * 注册Post类型及分类法等相关功能
      *
      * @param array $posttypes
      * @param array $taxonomies
      */
-    public static function posttype(array &$posttypes, &$taxonomies = [])
+    public static function posttype(array $posttypes, $taxonomies = [])
     {
-        global $wp_post_types;
+        static::$taxonomies = &$taxonomies;
 
         foreach ($posttypes as $posttype => $params) {
-            // 分类法
-            if (!empty($params['taxonomies']) && !empty($taxonomies)) {
-                static::taxonomy($taxonomies, $posttype, $taxNames = $params['taxonomies']);
+            if (isset($params['taxonomies'])) {
+                static::taxonomy($taxNames = $params['taxonomies'], $posttype);
                 unset($params['taxonomies']);
             }
 
-            // 设置metabox回调
-            if (\is_admin() && isset($params['meta_boxes']) && is_array($params['meta_boxes'])) {
-                $params['register_meta_box_cb'] = static::getMetaBoxCallback($params['meta_boxes'], $posttype,
-                    $params['register_meta_box_cb'] ?? null);
-                unset($params['meta_boxes']);
+            if (isset($params['meta_boxes'])) {
+                static::setRegisterMetaBoxCB($params, $posttype);
             }
 
-            // 已有的类型只注册元框
-            if (isset($wp_post_types[$posttype])) {
-                $object = $wp_post_types[$posttype];
-                if (\is_admin() && isset($params['register_meta_box_cb'])) {
-                    $object->register_meta_box_cb = $params['register_meta_box_cb'];
-                    $object->register_meta_boxes();
+            // 注册过的类型只重新注册元框
+            if (isset($GLOBALS['wp_post_types'][$posttype])) {
+                $object = $GLOBALS['wp_post_types'][$posttype];
+                if (isset($params['register_meta_box_cb'])) {
+                    \add_action('add_meta_boxes_' . $object->name, $params['register_meta_box_cb']);
                 }
             } else {
                 $object = \register_post_type($posttype, $params);
             }
 
-            $object->taxonomies = array_merge($object->taxonomies, $taxNames);
+            array_push($object->taxonomies, ...$taxNames);
 
-            // meta
-            if (isset($params['meta']) && is_array($params['meta'])) {
+            if (isset($params['meta'])) {
                 foreach ($params['meta'] as $key => $args) {
                     \register_post_meta($posttype, $key, $args);
                 }
                 unset($object->meta);
             }
         }
+
+        static::$taxonomies = [];
     }
 
     /**
-     * 注册分类法及相关
+     * 注册分类法及相关功能
      *
      * @param array $taxonomies
      * @param string $posttype
-     * @param array $taxNameWith
      */
-    public static function taxonomy(array &$taxonomies, $posttype, $taxNameWith = [])
+    public static function taxonomy(array $taxonomies, $posttype)
     {
-        global $wp_taxonomies;
-
-        foreach ((empty($taxNameWith) ? $taxonomies : $taxNameWith) as $taxonomy => $params) {
-            if (is_string($params) && isset($taxonomies[$params])) {
+        foreach ($taxonomies as $taxonomy => $params) {
+            if (is_string($params)) {
+                if (!isset(static::$taxonomies[$params])) {
+                    continue;
+                }
                 $taxonomy = $params;
-                $params   = $taxonomies[$params];
+                $params   = static::$taxonomies[$params];
             }
 
-            if (!is_array($params)) {
-                continue;
-            }
-
-            if (\is_admin() && isset($params['fields'])) {
-                static::addTaxFromFields($taxonomy, $params['fields']);
+            if (isset($params['fields'])) {
+                \is_admin() && static::addTaxField($taxonomy, $params['fields']);
                 unset($params['fields']);
             }
 
-            ($wp_taxonomies[$taxonomy] ?? \register_taxonomy($taxonomy, $posttype, $params));
+            $GLOBALS['wp_taxonomies'][$taxonomy] ?? \register_taxonomy($taxonomy, $posttype, $params);
+        }
+    }
+
+    /**
+     * 添加分类法的自定义字段
+     *
+     * @param string $taxonomy
+     * @param string|array $fields
+     */
+    public static function addTaxField($taxonomy, $fields = [])
+    {
+        foreach ((array) $fields as $field) {
+            $field::add($taxonomy);
         }
     }
 
     /**
      * 字段添加到所有分类法
      *
-     * @param \Impack\WP\Post\TaxField|\Impack\WP\Post\TaxField[] $className
+     * @param string|array $className
      * @param array $exclude 排除的分类法
      */
     public static function addGlobalTaxField($className, array $exclude = [])
     {
-        global $wp_taxonomies;
-
         $exclude = array_merge(['nav_menu', 'link_category', 'post_format'], $exclude);
 
-        foreach (array_keys($wp_taxonomies) as $taxonomy) {
+        foreach (array_keys($GLOBALS['wp_taxonomies']) as $taxonomy) {
             if (!in_array($taxonomy, $exclude)) {
-                static::addTaxFromFields($taxonomy, $className);
+                static::addTaxField($taxonomy, $className);
             }
         }
     }
 
     /**
-     * 给指定分类法添加表单字段
+     * 设置注册元框的回调
      *
-     * @param string $taxonomy
-     * @param \Impack\WP\Post\TaxField|\Impack\WP\Post\TaxField[] $fields
-     */
-    public static function addTaxFromFields($taxonomy, $fields = [])
-    {
-        foreach ((array) $fields as $field) {
-            call_user_func([$field, 'add'], $taxonomy);
-        }
-    }
-
-    /**
-     * 返回注册metabox的回调函数
-     *
-     * @param array $boxes
+     * @param array $params
      * @param string $posttype
-     * @param callable $callback
-     * @return Closure
      */
-    public static function getMetaBoxCallback(array $boxes, $posttype, $callback = null)
+    public static function setRegisterMetaBoxCB(array &$params, $posttype)
     {
-        if (empty($boxes)) {
+        $boxes = $params['meta_boxes'];
+        unset($params['meta_boxes']);
+
+        if (!\is_admin() || empty($boxes)) {
             return;
         }
 
@@ -136,15 +127,15 @@ class Register
             }
         });
 
-        return function ($post) use ($boxes, $callback) {
+        $callback = $params['register_meta_box_cb'] ?? null;
+
+        $params['register_meta_box_cb'] = function ($post) use ($boxes, $callback) {
             foreach ($boxes as $box) {
                 $className = array_shift($box);
                 $className::add(array_shift($box), array_shift($box), null, ...$box);
             }
 
-            if (is_callable($callback)) {
-                call_user_func($callback, $post);
-            }
+            is_callable($callback) && call_user_func($callback, $post);
         };
     }
 }

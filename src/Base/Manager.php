@@ -19,9 +19,7 @@ class Manager
      */
     public function registerPostType()
     {
-        $posttypes  = $this->getConfig('posttype');
-        $taxonomies = $this->getConfig('taxonomy');
-        Register::postType($posttypes, $taxonomies);
+        Register::postType($this->getConfig('posttype'), $this->getConfig('taxonomy'));
     }
 
     /**

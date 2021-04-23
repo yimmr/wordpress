@@ -4,8 +4,6 @@ namespace Impack\WP\Post;
 
 abstract class TaxField
 {
-    protected $app;
-
     /** 新建分类法的表单字段 */
     abstract public function addField();
 
@@ -26,7 +24,7 @@ abstract class TaxField
     /**
      * 添加分类法表单字段
      *
-     * @param  string  $taxonomy
+     * @param string $taxonomy
      */
     public static function add($taxonomy)
     {
@@ -46,29 +44,5 @@ abstract class TaxField
         if (isset($_POST['action']) && in_array($_POST['action'], ['add-tag', 'editedtag'])) {
             (new static )->save($termid);
         }
-    }
-
-    /**
-     * 执行钩子
-     *
-     * @param string $name
-     */
-    public function doAction($name = '')
-    {
-        if (!$name) {
-            $name = explode('\\', static::class);
-            $name = end($name);
-        }
-        \do_action("imwp_tax_field_{$name}", $this);
-    }
-
-    /**
-     * 设置应用实例
-     *
-     * @param Object $app
-     */
-    public function setApp($app)
-    {
-        $this->app = $app;
     }
 }

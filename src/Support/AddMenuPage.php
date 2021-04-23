@@ -6,65 +6,21 @@ class AddMenuPage
 {
     protected static $enqueue = [];
 
-    protected static $default = [
-        'title'    => 'Menu',
-        'name'     => 'Menu',
-        'cap'      => 'manage_options',
-        'slug'     => null,
-        'render'   => null,
-        'icon'     => 'dashicons-admin-generic',
-        'position' => null,
-    ];
-
     /**
-     * 添加单个菜单页
-     *
-     * @param array $menu
-     * @param string $parent
-     */
-    public static function add(array $menu, $parent = '')
-    {
-        \add_action('admin_enqueue_scripts', [static::class, 'enqueueScripts']);
-
-        if ($parent) {
-            static::resolveSubMenuMethod($parent, $method);
-            static::addMenuPage($method, $menu, $parent);
-        } else {
-            static::addMenuPage('add_menu_page', $menu);
-        }
-    }
-
-    /**
-     * 添加多个菜单页面
+     * 添加多个菜单页面同时入队脚本
      *
      * @param array $menus
      */
     public static function addMany(array $menus)
     {
-        global $admin_page_hooks;
-
         \add_action('admin_enqueue_scripts', [static::class, 'enqueueScripts']);
-
         foreach ($menus as $menu) {
-            $parent = $slug = $menu['slug'] ?? '';
-
-            static::resolveSubMenuMethod($parent, $method);
-
-            // 仅不存在顶级菜单时添加
-            if (!isset($admin_page_hooks[$slug]) && $parent !== true) {
-                static::addMenuPage('add_menu_page', $menu);
-            }
-
-            if (!empty($menu['children'])) {
-                foreach ($menu['children'] as $submenu) {
-                    static::addMenuPage($method, $submenu, $slug);
-                }
-            }
+            static::add($menu);
         }
     }
 
     /**
-     * 引入页面脚本样式
+     * 添加入队脚本样式的钩子
      *
      * @param string $hook
      */
@@ -72,67 +28,97 @@ class AddMenuPage
     {
         if (isset(static::$enqueue[$hook])) {
             call_user_func([static::$enqueue[$hook], 'enqueue']);
-            unset(static::$enqueue[$hook]);
         }
+        static::$enqueue = [];
     }
 
     /**
-     * 解析添加子菜单的方法，存在默认顶级菜单时 $parent 改为true
+     * 添加菜单页及子菜单页，不会重复添加顶级菜单
      *
-     * @param string $parent
-     * @param string $method
-     */
-    protected static function resolveSubMenuMethod(&$parent, &$method)
-    {
-        $method = "add_{$parent}_page";
-        if (function_exists($method)) {
-            $parent = true;
-        } else {
-            $method = 'add_submenu_page';
-        }
-    }
-
-    /**
-     * 添加单个菜单页面
-     *
-     * @param string $method
      * @param array $menu
-     * @param string|bool $parentSlug
+     * @param string $parent
      */
-    protected static function addMenuPage($method, $menu, $parentSlug = false)
+    public static function add(array $menu)
     {
-        $hook = call_user_func_array($method, static::toMenuParams($menu, $parentSlug, $render));
-        if ($render) {
-            static::$enqueue[$hook] = $render;
+        $parent   = $menu['slug'] ?? '';
+        $method   = static::getMethodToAddChild($parent);
+        $children = [];
+
+        if (isset($menu['children'])) {
+            $children = $menu['children'];
+            unset($menu['children']);
+        }
+
+        // 已加顶级菜单或定义了添加子菜单的快捷方法时忽略
+        if (!isset($GLOBALS['admin_page_hooks'][$menu['slug']]) && $parent !== true) {
+            static::call('add_menu_page', $menu);
+        }
+
+        foreach ($children as $submenu) {
+            static::call($method, $submenu, $parent);
         }
     }
 
     /**
-     * 键值数组转换添加菜单页参数数组
+     * 调用指定方法添加菜单页
      *
      * @param array $params
      * @param string|bool $parentSlug
-     * @param string $render 提取菜单页面类的类名
-     * @return array
+     * @return string — page's hook_suffix
      */
-    protected static function toMenuParams(array &$params, $parentSlug = false, &$render = '')
+    public static function call($method, array &$params, $parentSlug = false)
     {
-        $result = is_string($parentSlug) ? ['parent' => $parentSlug] : [];
+        $args   = [];
+        $render = 4;
 
-        foreach (static::$default as $key => $val) {
-            if (!($parentSlug && $key == 'icon')) {
-                $result[$key] = $params[$key] ?? $val;
-            }
+        foreach ([
+            'title'    => 'Menu',
+            'name'     => 'Menu',
+            'cap'      => 'manage_options',
+            'slug'     => '',
+            'render'   => '',
+            'position' => null,
+        ] as $key => $default) {
+            $args[] = $params[$key] = $params[$key] ?? $default;
         }
 
-        // 渲染回调是类名时，视为使用菜单页面类且只在闭包中创建实例
-        if (is_string($result['render']) && class_exists($result['render'])) {
-            $render           = $result['render'];
-            $result['render'] = function () use ($render, &$result) {
-                $render::renderPage($result);
+        if (is_string($parentSlug)) {
+            array_unshift($args, $params['parent'] = $parentSlug);
+            $parentSlug = true;
+            ++$render;
+        }
+
+        if ($parentSlug === false) {
+            $args[]  = $args[5];
+            $args[5] = $params['icon'] = $params['icon'] ?? '';
+        }
+
+        if (is_string($params['render']) && class_exists($params['render'])) {
+            $args[$render] = function () use ($params) {
+                call_user_func([$params['render'], 'render'], $params);
             };
+
+            $hook                   = call_user_func_array($method, $args);
+            static::$enqueue[$hook] = $params['render'];
+
+            return $hook;
         }
 
-        return $result;
+        return call_user_func_array($method, $args);
+    }
+
+    /**
+     * 获取添加子菜单的方法，存在快捷方法时 $parent=true
+     *
+     * @param string $parent
+     * @return string
+     */
+    public static function getMethodToAddChild(&$parent = '')
+    {
+        if (function_exists($method = "add_{$parent}_page")) {
+            $parent = true;
+            return $method;
+        }
+        return 'add_submenu_page';
     }
 }

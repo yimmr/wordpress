@@ -1,6 +1,6 @@
 <?php
 
-namespace Impack\WP\Support;
+namespace Impack\WP\Components;
 
 abstract class MenuPage
 {
@@ -9,50 +9,40 @@ abstract class MenuPage
     protected $notices = [];
 
     /**
-     * 入队页面脚本样式
+     * 引入页面脚本样式
      */
     abstract public static function enqueue();
 
     /**
      * 渲染页面
      */
-    abstract public function render();
+    abstract public function view();
 
     /**
      * 创建页面实例并输出页面
      *
      * @param array $props
      */
-    public static function renderPage(array $props = [])
+    public static function render(array $props = [])
     {
         $instance = new static;
-        $instance->setProps($props);
+        $instance->fill($props);
         \add_action('imwp_option_form_before', [$instance, 'notice']);
-        $instance->render();
+        $instance->view();
     }
 
     /**
-     * 重置属性
+     * 填充页面属性
      *
      * @param array $props
      */
-    public function setProps(array $props)
+    public function fill(array $props)
     {
         $this->props = $props;
     }
 
     /**
-     * 读取所有属性
-     *
-     * @return array
-     */
-    public function getProps()
-    {
-        return $this->props;
-    }
-
-    /**
-     * 显示内置的通知消息
+     * 显示已设置的消息
      */
     public function notice()
     {
@@ -106,7 +96,7 @@ abstract class MenuPage
     }
 
     /**
-     * 获取唯一的消息$setting
+     * 获取消息的唯一ID
      *
      * @return string
      */
@@ -117,31 +107,17 @@ abstract class MenuPage
     }
 
     /**
-     * 执行钩子
+     * 读取全部属性
      *
-     * @param string $name
+     * @return array
      */
-    public function doAction($name = '')
+    public function getProps()
     {
-        if (!$name) {
-            $name = explode('\\', static::class);
-            $name = end($name);
-        }
-        \do_action("imwp_menu_page_{$name}", $this);
+        return $this->props;
     }
 
     /**
-     * 设置应用实例
-     *
-     * @param Object $app
-     */
-    public function setApp($app)
-    {
-        $this->app = $app;
-    }
-
-    /**
-     * 读取单个属性
+     * 读取属性
      *
      * @param string $name
      * @return mixed
@@ -152,7 +128,7 @@ abstract class MenuPage
     }
 
     /**
-     * 设置单个属性
+     * 设置属性
      *
      * @param string $name
      * @param mixed $value
