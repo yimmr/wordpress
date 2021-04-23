@@ -1,0 +1,17 @@
+{
+    "name": "impack/wp-service",
+    "license": "MIT",
+    "description": "",
+    "autoload": {
+        "psr-4": {
+            "Impack\\WP\\Service\\": ""
+        }
+    },
+    "require": {
+        "php": ">=7.3"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev"
+}
