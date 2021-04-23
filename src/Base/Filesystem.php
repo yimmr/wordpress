@@ -3,7 +3,6 @@
 namespace Impack\WP\Base;
 
 use Exception;
-use Impack\WP\Base\ApplicationTrait;
 use ReflectionObject;
 
 class Filesystem
@@ -72,6 +71,7 @@ class Filesystem
 
     public function __call($name, $arguments)
     {
-        return call_user_func_array([$this->wpFilesystem, ApplicationTrait::methodToHook($name)], $arguments);
+        $name = preg_replace('/(.)(?=[A-Z])/u', '$1' . '_', $name);
+        return call_user_func_array([$this->wpFilesystem, mb_strtolower($name, 'UTF-8')], $arguments);
     }
 }

@@ -7,6 +7,7 @@ use Impack\WP\Post\Register;
 
 class Manager
 {
+    /** @var \Impack\WP\Base\Application */
     protected $app;
 
     public function __construct(Application $app)

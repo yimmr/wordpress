@@ -135,7 +135,6 @@ trait BaseTrait
      */
     public function methodToHook($value)
     {
-        $value = preg_replace('/(.)(?=[A-Z])/u', '$1' . '_', $value);
-        return mb_strtolower($value, 'UTF-8');
+        return mb_strtolower(preg_replace('/(.)(?=[A-Z])/u', '$1' . '_', $value), 'UTF-8');
     }
 }

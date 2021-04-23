@@ -7,6 +7,7 @@ use Impack\WP\Support\AddMenuPage;
 
 class Admin
 {
+    /** @var \Impack\WP\Base\Application */
     protected $app;
 
     public function __construct(Application $app = null)
