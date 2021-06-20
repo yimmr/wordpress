@@ -3,7 +3,7 @@
 namespace Impack\WP\Base;
 
 use Impack\WP\Base\Application;
-use Impack\WP\Support\AddMenuPage;
+use Impack\WP\Components\MenuPage;
 
 class Admin
 {
@@ -27,7 +27,8 @@ class Admin
      */
     public function addMenu()
     {
-        AddMenuPage::addMany($this->getConfig('admin.menu_pages', []));
+        \add_action('admin_enqueue_scripts', [MenuPage::class, 'enqueueScripts']);
+        MenuPage::addMany($this->getConfig('admin.menu_pages', []));
     }
 
     /**

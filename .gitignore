@@ -1,5 +1,6 @@
 /vendor
 /test
 /composer.lock
+.vscode
 
 release.sh

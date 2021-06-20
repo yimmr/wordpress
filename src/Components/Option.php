@@ -100,6 +100,10 @@ class Option
             $name    = "{$prefix}{$key}";
             $content = \apply_filters("imwp_trgroup_{$key}_field", '', [$field, $name, $values[$key]]);
 
+            if (is_null($content)) {
+                continue;
+            }
+
             if (empty($content)) {
                 if (empty($field['children'])) {
                     $content = static::getHtmlOfFieldType($field, $name, $values[$key] ?? null);
@@ -133,7 +137,7 @@ class Option
             $content .= '</span>';
             $content .= '</fieldset><br>';
         }
-        return rtrim($content, '<br>');
+        return preg_replace('/<br>$/', '', $content);
     }
 
     /**
@@ -188,5 +192,31 @@ class Option
                 return $class::input($name, $value ?? '', $field['type'], $field['attrs']);
                 break;
         }
+    }
+
+    /**
+     * 重复拼接一组子字段
+     *
+     * @param array $params — `[$field, $name, $value]`
+     * @param int $count
+     * @return string|null
+     */
+    public static function repeatGroupChildren($params, $count = 3)
+    {
+        list($field, $name, $value) = $params;
+
+        $content = null;
+        $a       = 0;
+
+        while ($a < $count) {
+            $subname = "{$name}[{$a}]";
+            $content .= '<div>';
+            $content .= $count > 1 ? '<p><strong>[' . ($a + 1) . ']</strong></p>' : '';
+            $content .= Option::trGroupChildren($field['children'], $subname, $value);
+            $content .= '</div>';
+            ++$a;
+        }
+
+        return $content;
     }
 }

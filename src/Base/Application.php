@@ -3,11 +3,11 @@
 namespace Impack\WP\Base;
 
 use Impack\Container\Container;
-use Impack\WP\Service\BaseTrait;
+use Impack\WP\Service\PathTrait;
 
 abstract class Application extends Container
 {
-    use BaseTrait;
+    use PathTrait;
 
     protected $prefix = 'imwp';
 
@@ -15,9 +15,9 @@ abstract class Application extends Container
 
     protected $hasBeenBootstrapped = false;
 
-    public function __construct($path = null, $url = null)
+    public function __construct($path = '', $URL = '')
     {
-        $this->registerBasePath($path, $url);
+        $this->setPath($path)->setURL($URL);
         $this->registerBaseBindings();
         $this->registerCoreAliases();
     }
@@ -26,23 +26,52 @@ abstract class Application extends Container
     abstract public function provider();
 
     /**
-     * 返回配置文件目录
+     * 给指定键名添加前缀
      *
      * @return string
      */
-    public function configPath(string $path = '')
+    public function prefix(string $key = '', string $delimiter = '_')
     {
-        return $this->path . \DIRECTORY_SEPARATOR . 'config' . ($path ? \DIRECTORY_SEPARATOR . $path : $path);
+        return $this->prefix . $delimiter . $key;
     }
 
     /**
-     * 返回文件存储目录
+     * 指定对象方法与动作钩子绑定
      *
+     * @param Object|null $object
+     * @param string $method
+     * @param int $priority
+     * @param int $acceptedArgs
+     * @return true
+     */
+    public function bindAction($object, $method, $priority = 10, $acceptedArgs = 1)
+    {
+        return \add_action($this->methodToHook($method), [is_null($object) ? $this : $object, $method], $priority, $acceptedArgs);
+    }
+
+    /**
+     * 指定对象方法与过滤钩子绑定
+     *
+     * @param Object|null $object
+     * @param string $method
+     * @param int $priority
+     * @param int $acceptedArgs
+     * @return true
+     */
+    public function bindFilter($object, $method, $priority = 10, $acceptedArgs = 1)
+    {
+        return \add_filter($this->methodToHook($method), [is_null($object) ? $this : $object, $method], $priority, $acceptedArgs);
+    }
+
+    /**
+     * 方法名转成钩子名
+     *
+     * @param string $value
      * @return string
      */
-    public function storagePath(string $path = '')
+    public function methodToHook($value)
     {
-        return $this->path . \DIRECTORY_SEPARATOR . 'storage' . ($path ? \DIRECTORY_SEPARATOR . $path : $path);
+        return mb_strtolower(preg_replace('/.(?=[A-Z])/u', '$0_', $value), 'UTF-8');
     }
 
     /** 注册前台服务 */
@@ -179,5 +208,26 @@ abstract class Application extends Container
                 $this->alias($id, $alias);
             }
         }
+    }
+
+    /**
+     * make方法的静态用法
+     *
+     * @param string $abstract
+     * @return mixed
+     */
+    public static function create($abstract)
+    {
+        return static::getInstance()->make($abstract);
+    }
+
+    /**
+     * getInstance别名
+     *
+     * @return static
+     */
+    public static function i()
+    {
+        return static::getInstance();
     }
 }
