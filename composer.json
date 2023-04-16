@@ -1,0 +1,13 @@
+{
+    "name": "impack/wordpress",
+    "description": "",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Impack\\WP\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=7.4"
+    }
+}
