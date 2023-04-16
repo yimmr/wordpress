@@ -36,7 +36,7 @@ class Form
 
     public static function settingsField($field, $depth = 0)
     {
-        if (true || $field['server_render'] ?? ($depth > 0 && isset($field['children']))) {
+        if ($field['server_render'] ?? ($depth > 0 && isset($field['children']))) {
             echo static::jsField($field, $depth);
             return;
         }
