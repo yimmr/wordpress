@@ -36,7 +36,7 @@ class Form
 
     public static function settingsField($field, $depth = 0)
     {
-        if ($field['server_render'] ?? ($depth > 0 && isset($field['children']))) {
+        if (true || $field['server_render'] ?? ($depth > 0 && isset($field['children']))) {
             echo static::jsField($field, $depth);
             return;
         }
@@ -56,11 +56,8 @@ class Form
 
             unset($field['default']);
 
-            if (
-                $depth > 0 && isset($title)
-                && (isset($field['options']) || !static::hasOwnLabel($type))
-            ) {
-                echo '<p style="margin-top:.5em">' . $title . '</p>';
+            if (isset($title) && (isset($field['options']) || !static::hasOwnLabel($type))) {
+                echo $depth > 0 ? '<p style="margin-top:.5em">' . $title . '</p>' : '';
                 unset($field['label'], $field['title']);
             }
 
@@ -241,7 +238,7 @@ class Form
     protected static function checkControl(&$attrs)
     {
         $label = $attrs['label'] ?? '';
-        unset($attrs['label']);
+        unset($attrs['label'], $attrs['title']);
         $attributes = static::toAttributes($attrs);
         return "<label><input{$attributes}>{$label}</label>";
     }
