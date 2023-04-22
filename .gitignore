@@ -1,9 +1,2 @@
 vendor
-/vendor/*
-# !/vendor/dev74
-/composer.lock
 .vscode
-
-/test*
-/wp-demo
-/micowp
