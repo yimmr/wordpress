@@ -34,7 +34,7 @@ class Setting
 
     public function addUpdatedNoticeIf()
     {
-        if (isset($_GET['settings-updated']) && $_GET['settings-updated']) {
+        if (isset($_GET['settings-updated']) && $_GET['settings-updated'] && count($this->getErrors()) < 1) {
             $this->addUpdatedNotice();
         }
     }

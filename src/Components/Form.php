@@ -4,40 +4,49 @@ namespace Impack\WP\Components;
 
 class Form
 {
+    public static function addEnqueueAssetsIf($hook, $baseURL, $basePath = '')
+    {
+        \add_action('admin_enqueue_scripts', fn($target) => $target === $hook ? static::enqueueAssets($baseURL, $basePath) : null);
+    }
+
     /**
      * 页内加载所需的脚本和样式
      */
-    public static function enqueue($baseURL, $basePath = '')
+    public static function enqueueAssets()
     {
-        if ($basePath) {
-            $baseURL = str_replace($basePath, $baseURL, __DIR__);
-        }
-
+        $assets = static::getAssets();
         \wp_enqueue_media();
-        \wp_enqueue_style('impack-wpform', $baseURL . '/assets/impack-wpform.min.css', ['mediaelement'], '1.0');
-        \wp_enqueue_script('impack-wpform', $baseURL . '/assets/impack-wpform.min.js', ['mediaelement'], '1.0', true);
+        \wp_enqueue_style(...$assets['style']);
+        \wp_enqueue_script(...$assets['script']);
     }
 
-    public static function addEnqueueIf($hook, $baseURL, $basePath = '')
+    public static function registerAssets()
     {
-        \add_action('admin_enqueue_scripts', fn($target) => $target === $hook ? static::enqueue($baseURL, $basePath) : null);
+        $assets = static::getAssets();
+        \wp_register_style(...$assets['style']);
+        \wp_register_script(...$assets['script']);
     }
 
-    public static function jsField(&$attrs, $depth = 0)
+    public static function getAssets()
     {
-        $attrs['depth'] = $depth;
-        return '<div data-impack-wpform-field="' . htmlspecialchars(json_encode($attrs)) . '"></div>';
+        $name    = 'impack-wpform';
+        $baseURL = str_replace(rtrim(\get_home_path(), '\/'), \home_url(), __DIR__);
+        return [
+            'style'  => [$name, $baseURL . "/assets/{$name}.min.css", ['mediaelement'], '1.1'],
+            'script' => [$name, $baseURL . "/assets/{$name}.min.js", ['mediaelement'], '1.1', true],
+        ];
     }
 
-    public static function description($content)
+    public static function settingsFieldJS(&$field, $depth = 0)
     {
-        echo '<p class="description">' . $content . '</p>';
+        $field['depth'] = $depth;
+        return '<div data-impack-wpform-field="' . htmlspecialchars(json_encode($field)) . '"></div>';
     }
 
     public static function settingsField($field, $depth = 0)
     {
         if ($field['server_render'] ?? ($depth > 0 && isset($field['children']))) {
-            echo static::jsField($field, $depth);
+            echo static::settingsFieldJS($field, $depth);
             return;
         }
 
@@ -86,7 +95,7 @@ class Form
                     echo static::text($field);
                     break;
                 default:
-                    echo static::jsField($field, $depth);
+                    echo static::settingsFieldJS($field, $depth);
                     break;
             }
 
@@ -117,7 +126,7 @@ class Form
 
     public static function hasOwnLabel($type)
     {
-        return in_array($type, ['checkbox', 'radio', 'video', 'image', 'audio']);
+        return in_array($type, ['checkbox', 'radio', 'video', 'image', 'audio', 'items', 'list']);
     }
 
     /**
@@ -160,7 +169,8 @@ class Form
      */
     public static function textarea(array $attrs = [])
     {
-        $value = $attrs['value'];
+        $value = $attrs['value'] ?? '';
+        $value = is_array($value) ? implode("\n", $attrs['value']) : $value;
         unset($attrs['value']);
         $attrs += ['rows' => 10, 'cols' => 50];
         return '<textarea' . self::toAttributes($attrs) . '>' . $value . '</textarea>';
@@ -265,5 +275,10 @@ class Form
     {
         $attrs['type'] = 'radio';
         return static::checkControl($attrs);
+    }
+
+    public static function description($content)
+    {
+        echo '<p class="description">' . $content . '</p>';
     }
 }

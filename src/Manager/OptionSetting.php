@@ -168,6 +168,12 @@ class OptionSetting
                 $field['value'] = $value ?? '';
             }
 
+            if (isset($field['template'])) {
+                foreach ($field['template'] as &$tplf) {
+                    $this->setFieldValue($tplf, $tplf['default'] ?? null);
+                }
+            }
+
             unset($field['default']);
             return;
         }
@@ -186,6 +192,10 @@ class OptionSetting
         foreach ($fields as &$field) {
             if (array_key_exists('default', $field)) {
                 $arr[$field['name']] = $field['default'];
+                if (isset($field['type']) && $field['type'] == 'items' && count($arr[$field['name']]) > 0) {
+                    $this->extractDefaultValue($itemDefaultValue, $field['template']);
+                    $arr[$field['name']] = array_map(fn($v) => $v + $itemDefaultValue, $arr[$field['name']]);
+                }
             } else if (isset($field['fields'])) {
                 $arr[$field['name']] = [];
                 $this->extractDefaultValue($arr[$field['name']], $field['fields']);
